@@ -1,9 +1,46 @@
-import { VStack, Icon } from 'native-base';
+import { useCallback, useState } from 'react';
+
+import { VStack, Icon, useToast, FlatList } from 'native-base';
 import { Octicons } from '@expo/vector-icons'
+import { useNavigation } from '@react-navigation/native'
+import { useFocusEffect } from '@react-navigation/native'
+
 import { Button } from '../components/Button';
 import { Header } from '../components/Header';
+import { EmptyPoolList } from '../components/EmptyPoolList';
+import { Loading } from '../components/Loading';
+import { PoolCard, PoolPros } from '../components/PoolCard';
+
+import { api } from '../services/api';
 
 export function Pools(){
+  const [isLoading, setIsLoading] = useState(false)
+  const [pools, setPools] = useState<PoolPros[]>([]);
+
+  const navigation = useNavigation();
+  const toast = useToast();
+
+  async function fetchPools(){
+    try{
+      setIsLoading(true);
+      const response = await api.get('/pools');
+      setPools(response.data.pools);
+    }catch(error){
+      console.log(error)
+
+      toast.show({
+
+      })
+    }finally{
+      setIsLoading(false);
+
+    }
+  }
+
+  useFocusEffect(useCallback(() => {
+    fetchPools();
+  }, []));
+
   return  (
     <VStack flex={1} bgColor="gray.900">
       <Header title="Meus bolões" />
@@ -11,8 +48,25 @@ export function Pools(){
         <Button 
           title="BUSCAR BOLÃO POR CÓDIGO" 
           leftIcon={<Icon as={Octicons} name="search" color="black" size="md" />}
+          onPress={() => navigation.navigate('find')}
         />
       </VStack>
+      
+      { isLoading ? <Loading /> :
+        <FlatList
+        data={pools} 
+        keyExtractor={item => item.id}
+        renderItem={({item}) => (
+          <PoolCard 
+            data={item}
+            onPress={() => navigation.navigate('details', { id: item.id })}
+          />
+        )}
+        px={5}
+        showsVerticalScrollIndicator={false}
+        _contentContainerStyle={{pb: 10}}
+        ListEmptyComponent={() => <EmptyPoolList />}
+      />}
     </VStack>
   )
 }
